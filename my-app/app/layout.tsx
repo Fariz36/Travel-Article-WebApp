@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Poppins, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
+import { CategoryProvider } from "@/components/providers/category-provider"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} ${inter.variable} font-sans antialiased`}>
-        {children}
+        <CategoryProvider>{children}</CategoryProvider>
         <Analytics />
       </body>
     </html>

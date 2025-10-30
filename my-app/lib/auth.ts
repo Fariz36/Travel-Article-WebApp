@@ -1,6 +1,9 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://extra-brooke-yeremiadio-46b2183e.koyeb.app"
 
+const AUTH_COOKIE_KEY = "travelhub_token"
+const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
+
 interface StrapiErrorResponse {
   error?: {
     status?: number
@@ -52,11 +55,17 @@ async function postAuth<T>(path: string, body: Record<string, unknown>): Promise
   return response.json()
 }
 
+function setAuthCookie(token: string) {
+  if (typeof document === "undefined") return
+  document.cookie = `${AUTH_COOKIE_KEY}=${token}; path=/; max-age=${AUTH_COOKIE_MAX_AGE}; sameSite=Lax`
+}
+
 export async function loginUser(credentials: { identifier: string; password: string }): Promise<AuthSuccessResponse> {
   const data = await postAuth<AuthSuccessResponse>("/api/auth/local", credentials)
   if (typeof window !== "undefined") {
     localStorage.setItem("travelhub_token", data.jwt)
     localStorage.setItem("travelhub_user", JSON.stringify(data.user))
+    setAuthCookie(data.jwt)
   }
   return data
 }
@@ -79,8 +88,22 @@ export function getStoredUser() {
   }
 }
 
+export function hasStoredToken() {
+  if (typeof window !== "undefined" && localStorage.getItem("travelhub_token")) {
+    return true
+  }
+  if (typeof document !== "undefined") {
+    return document.cookie.split(";").some((cookie) => cookie.trim().startsWith(`${AUTH_COOKIE_KEY}=`))
+  }
+  return false
+}
+
 export function clearStoredUser() {
-  if (typeof window === "undefined") return
-  localStorage.removeItem("travelhub_token")
-  localStorage.removeItem("travelhub_user")
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("travelhub_token")
+    localStorage.removeItem("travelhub_user")
+  }
+  if (typeof document !== "undefined") {
+    document.cookie = `${AUTH_COOKIE_KEY}=; path=/; max-age=0; sameSite=Lax`
+  }
 }

@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
 
 import { loginUser } from "@/lib/auth"
@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState("")
 
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get("redirect") ?? "/articles"
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -30,9 +32,9 @@ export default function LoginPage() {
     try {
       await loginUser({ identifier: email, password })
 
-      setSuccessMessage("Signed in successfully. Redirecting to articles...")
+      setSuccessMessage("Signed in successfully. Redirecting...")
       setTimeout(() => {
-        router.push("/articles")
+        router.push(redirectTo)
       }, 800)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to sign in. Please try again.")

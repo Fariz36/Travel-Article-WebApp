@@ -46,7 +46,7 @@ export function Footer() {
             <h4 className="font-semibold text-foreground mb-4">Community</h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/register" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link href="/articles/create" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Share Story
                 </Link>
               </li>

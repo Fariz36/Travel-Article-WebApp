@@ -39,19 +39,19 @@ export function Navigation() {
     return user.username || user.email?.split("@")[0] || "Traveller"
   }, [user])
 
-  const navLinks = (
-    <>
-      <Link href="/articles" className="text-foreground hover:text-primary transition-colors font-medium">
-        Explore
-      </Link>
-      <Link href="/articles" className="text-foreground hover:text-primary transition-colors font-medium">
-        Articles
-      </Link>
-      <Link href="/about" className="text-foreground hover:text-primary transition-colors font-medium">
-        About
-      </Link>
-    </>
-  )
+  const navLinks = useMemo(() => {
+    const links = [
+      { href: "/articles", label: "Explore" },
+      { href: "/articles", label: "Articles" },
+      { href: "/about", label: "About" },
+    ]
+
+    if (userName) {
+      links.push({ href: "/articles/create", label: "Create" })
+    }
+
+    return links
+  }, [userName])
 
   const authActions = userName ? (
     <div className="flex items-center gap-3">
@@ -91,7 +91,17 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">{navLinks}</div>
+          <div className="hidden md:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link
+                key={`${link.href}-${link.label}`}
+                href={link.href}
+                className="text-foreground hover:text-primary transition-colors font-medium"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
 
           <div className={cn("hidden md:flex items-center gap-4", userName ? "text-sm" : undefined)}>
             {authActions}
@@ -109,7 +119,16 @@ export function Navigation() {
         {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden pb-4 border-t border-border">
-            {navLinks}
+            {navLinks.map((link) => (
+              <Link
+                key={`${link.href}-${link.label}-mobile`}
+                href={link.href}
+                className="block py-2 text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
             <div className="mt-4 pt-4 border-t border-border">
               {userName ? (
                 <div className="space-y-3">

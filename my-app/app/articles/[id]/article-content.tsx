@@ -5,7 +5,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Heart, MessageCircle, Share2 } from "lucide-react"
 
-import type { ArticleDetail } from "@/lib/api"
+import { createComment, type ArticleDetail } from "@/lib/api"
+import { getStoredUser, hasStoredToken } from "@/lib/auth"
 import { getValidImageUrl } from "@/lib/utils"
 
 interface ArticleContentProps {
@@ -15,8 +16,10 @@ interface ArticleContentProps {
 interface DisplayComment {
   id: string
   author: string
+  authorEmail?: string
   date: string
   text: string
+  documentId?: string
 }
 
 function formatDate(isoDate: string) {
@@ -36,7 +39,9 @@ export function ArticleContent({ article }: ArticleContentProps) {
     () =>
       article.comments.map((comment) => ({
         id: comment.documentId ?? String(comment.id),
-        author: "Community Member",
+        documentId: comment.documentId,
+        author: comment.user?.username ?? comment.user?.email?.split("@")[0] ?? "Community Member",
+        authorEmail: comment.user?.email ?? undefined,
         date: formatDate(comment.createdAt),
         text: comment.content,
       })),
@@ -48,6 +53,11 @@ export function ArticleContent({ article }: ArticleContentProps) {
   const [commentInput, setCommentInput] = useState("")
   const [comments, setComments] = useState<DisplayComment[]>(initialComments)
   const [currentUrl, setCurrentUrl] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentUserName, setCurrentUserName] = useState("You")
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [commentError, setCommentError] = useState("")
+  const [commentSuccess, setCommentSuccess] = useState("")
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -59,6 +69,21 @@ export function ArticleContent({ article }: ArticleContentProps) {
     setComments(initialComments)
   }, [initialComments])
 
+  useEffect(() => {
+    const hydrateAuth = () => {
+      const authenticated = hasStoredToken()
+      setIsAuthenticated(authenticated)
+      const storedUser = getStoredUser()
+      if (storedUser) {
+        setCurrentUserName(storedUser.username ?? storedUser.email?.split("@")[0] ?? "You")
+      }
+    }
+
+    hydrateAuth()
+    window.addEventListener("storage", hydrateAuth)
+    return () => window.removeEventListener("storage", hydrateAuth)
+  }, [])
+
   const handleToggleLike = () => {
     setLiked((prev) => !prev)
     setLikesCount((prev) => prev + (liked ? -1 : 1))
@@ -66,20 +91,50 @@ export function ArticleContent({ article }: ArticleContentProps) {
 
   const handleAddComment = () => {
     const trimmed = commentInput.trim()
+    if (!isAuthenticated) {
+      setCommentError("Please sign in to join the discussion.")
+      return
+    }
+
     if (!trimmed) {
       return
     }
 
-    setComments((prev) => [
-      {
-        id: `${Date.now()}`,
-        author: "You",
-        date: formatDate(new Date().toISOString()),
-        text: trimmed,
-      },
-      ...prev,
-    ])
-    setCommentInput("")
+    void submitComment(trimmed)
+  }
+
+  const submitComment = async (content: string) => {
+    if (isSubmittingComment) return
+
+    setIsSubmittingComment(true)
+    setCommentError("")
+    setCommentSuccess("")
+
+    try {
+      const created = await createComment({
+        articleId: article.id,
+        content,
+      })
+
+      const newComment: DisplayComment = {
+        id: created.documentId ?? String(created.id),
+        documentId: created.documentId,
+        author: currentUserName,
+        authorEmail: created.user?.email,
+        date: formatDate(created.createdAt),
+        text: created.content,
+      }
+
+      setComments((prev) => [newComment, ...prev])
+      setCommentSuccess("Your comment has been posted.")
+      setCommentInput("")
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to post comment. Please try again in a moment."
+      setCommentError(message)
+    } finally {
+      setIsSubmittingComment(false)
+    }
   }
 
   const formattedDate = formatDate(article.createdAt)
@@ -206,33 +261,74 @@ export function ArticleContent({ article }: ArticleContentProps) {
 
             {/* Add Comment */}
             <div className="card-base p-6 mb-8">
-              <div className="flex gap-4">
-                <Image
-                  src={placeholderAvatarSrc}
-                  alt="Your avatar"
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 rounded-full border border-border object-cover"
-                />
-                <div className="flex-1">
-                  <textarea
-                    value={commentInput}
-                    onChange={(event) => setCommentInput(event.target.value)}
-                    placeholder="Share your thoughts about this article..."
-                    className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                    rows={3}
+              {isAuthenticated ? (
+                <div className="flex gap-4">
+                  <Image
+                    src={placeholderAvatarSrc}
+                    alt={currentUserName}
+                    width={40}
+                    height={40}
+                    className="h-10 w-10 rounded-full border border-border object-cover"
                   />
-                  <div className="flex justify-end mt-3">
-                    <button
-                      onClick={handleAddComment}
-                      disabled={!commentInput.trim()}
-                      className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Post Comment
-                    </button>
+                  <div className="flex-1">
+                    <textarea
+                      value={commentInput}
+                      onChange={(event) => setCommentInput(event.target.value)}
+                      placeholder="Share your thoughts about this article..."
+                      className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                      rows={3}
+                    />
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3">
+                      {(commentError || commentSuccess) && (
+                        <p className={commentError ? "text-destructive text-sm" : "text-emerald-600 text-sm"}>
+                          {commentError || commentSuccess}
+                        </p>
+                      )}
+                      <div className="flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setCommentInput("")}
+                          disabled={isSubmittingComment || commentInput.trim().length === 0}
+                          className="btn-outline px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={handleAddComment}
+                          disabled={isSubmittingComment || commentInput.trim().length === 0}
+                          className="btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-sm"
+                        >
+                          {isSubmittingComment ? (
+                            <>
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent"></span>
+                              Posting...
+                            </>
+                          ) : (
+                            "Post Comment"
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-foreground">Join the conversation</p>
+                    <p className="text-sm text-muted-foreground">
+                      Sign in to share your travel tips or ask the author a question.
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Link href="/login" className="btn-primary text-sm px-4 py-2">
+                      Sign In
+                    </Link>
+                    <Link href="/register" className="btn-outline text-sm px-4 py-2">
+                      Create Account
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Comments List */}

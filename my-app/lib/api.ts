@@ -49,6 +49,10 @@ export interface ArticleEntity {
     documentId: string
     content: string
     createdAt: string
+    user?: {
+      username?: string
+      email?: string
+    } | null
   }>
   localizations?: ArticleEntity[]
 }
@@ -71,15 +75,68 @@ export interface ArticleDetail extends ArticleListItem {
     documentId: string
     content: string
     createdAt: string
+    user?: {
+      username?: string
+      email?: string
+    } | null
   }>
+}
+
+export interface CategoryEntity {
+  id: number
+  documentId: string
+  name: string
+  description?: string | null
+}
+
+export interface CategoryOption {
+  id: number
+  documentId: string
+  name: string
+}
+
+export interface CreateArticlePayload {
+  title: string
+  description: string
+  coverImageUrl?: string
+  categoryId?: number
+}
+
+export interface CommentEntity {
+  id: number
+  documentId: string
+  content: string
+  createdAt: string
+  article?: {
+    id: number
+  }
+  user?: {
+    id: number
+    username: string
+    email: string
+  } | null
+}
+
+export interface CreateCommentPayload {
+  articleId: number
+  content: string
+}
+
+export interface CreateCategoryPayload {
+  name: string
+  description?: string
 }
 
 const defaultRevalidate = 60
 
 async function fetchFromApi<T>(path: string, init: RequestInit = {}, revalidate = defaultRevalidate): Promise<T> {
   const headers = new Headers(init.headers ?? {})
-  if (API_TOKEN && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${API_TOKEN}`)
+  if (!headers.has("Authorization")) {
+    const storedToken = typeof window !== "undefined" ? localStorage.getItem("travelhub_token") : null
+    const token = storedToken || API_TOKEN
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`)
+    }
   }
   if (!headers.has("Content-Type") && init.method && init.method !== "GET") {
     headers.set("Content-Type", "application/json")
@@ -149,6 +206,79 @@ export async function getArticleByDocumentId(documentId: string): Promise<Articl
         documentId: comment.documentId,
         content: comment.content,
         createdAt: comment.createdAt,
+        user: comment.user ?? null,
       })) ?? [],
   }
+}
+
+export async function getCategoriesList(): Promise<CategoryOption[]> {
+  const response = await fetchFromApi<ApiListResponse<CategoryEntity>>("/api/categories", {}, 300)
+
+  return response.data.map((category) => ({
+    id: category.id,
+    documentId: category.documentId,
+    name: category.name,
+  }))
+}
+
+export async function createArticle(payload: CreateArticlePayload): Promise<ArticleEntity> {
+  const body = {
+    data: {
+      title: payload.title,
+      description: payload.description,
+      cover_image_url: payload.coverImageUrl ?? null,
+      ...(payload.categoryId ? { category: payload.categoryId } : {}),
+    },
+  }
+
+  const response = await fetchFromApi<ApiSingleResponse<ArticleEntity>>(
+    "/api/articles",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    0
+  )
+
+  return response.data
+}
+
+export async function createComment(payload: CreateCommentPayload): Promise<CommentEntity> {
+  const body = {
+    data: {
+      content: payload.content,
+      article: payload.articleId,
+    },
+  }
+
+  const response = await fetchFromApi<ApiSingleResponse<CommentEntity>>(
+    "/api/comments",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    0
+  )
+
+  return response.data
+}
+
+export async function createCategory(payload: CreateCategoryPayload): Promise<CategoryEntity> {
+  const body = {
+    data: {
+      name: payload.name,
+      description: payload.description ?? null,
+    },
+  }
+
+  const response = await fetchFromApi<ApiSingleResponse<CategoryEntity>>(
+    "/api/categories",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    0
+  )
+
+  return response.data
 }
