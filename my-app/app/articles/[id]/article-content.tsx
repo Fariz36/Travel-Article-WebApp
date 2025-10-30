@@ -1,0 +1,293 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { ArrowLeft, Heart, MessageCircle, Share2 } from "lucide-react"
+
+import type { ArticleDetail } from "@/lib/api"
+import { getValidImageUrl } from "@/lib/utils"
+
+interface ArticleContentProps {
+  article: ArticleDetail
+}
+
+interface DisplayComment {
+  id: string
+  author: string
+  date: string
+  text: string
+}
+
+function formatDate(isoDate: string) {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(new Date(isoDate))
+  } catch {
+    return ""
+  }
+}
+
+export function ArticleContent({ article }: ArticleContentProps) {
+  const initialComments = useMemo<DisplayComment[]>(
+    () =>
+      article.comments.map((comment) => ({
+        id: comment.documentId ?? String(comment.id),
+        author: "Community Member",
+        date: formatDate(comment.createdAt),
+        text: comment.content,
+      })),
+    [article.comments]
+  )
+
+  const [liked, setLiked] = useState(false)
+  const [likesCount, setLikesCount] = useState(() => Math.max(24, initialComments.length * 4))
+  const [commentInput, setCommentInput] = useState("")
+  const [comments, setComments] = useState<DisplayComment[]>(initialComments)
+  const [currentUrl, setCurrentUrl] = useState("")
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentUrl(window.location.href)
+    }
+  }, [])
+
+  useEffect(() => {
+    setComments(initialComments)
+  }, [initialComments])
+
+  const handleToggleLike = () => {
+    setLiked((prev) => !prev)
+    setLikesCount((prev) => prev + (liked ? -1 : 1))
+  }
+
+  const handleAddComment = () => {
+    const trimmed = commentInput.trim()
+    if (!trimmed) {
+      return
+    }
+
+    setComments((prev) => [
+      {
+        id: `${Date.now()}`,
+        author: "You",
+        date: formatDate(new Date().toISOString()),
+        text: trimmed,
+      },
+      ...prev,
+    ])
+    setCommentInput("")
+  }
+
+  const formattedDate = formatDate(article.createdAt)
+  const authorBio = "We are gathering more details about this author. Check back soon for their full travel story."
+  const coverImageSrc = getValidImageUrl(article.coverImageUrl)
+  const authorAvatarSrc = getValidImageUrl(null)
+  const placeholderAvatarSrc = getValidImageUrl(null)
+
+  return (
+    <div>
+      {/* Hero Section */}
+      <div className="relative bg-gradient-to-b from-muted/40 to-background pt-24 pb-12">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <Link
+            href="/articles"
+            className="inline-flex items-center gap-2 text-primary hover:text-secondary transition-colors font-medium"
+          >
+            <ArrowLeft size={20} />
+            Back to Articles
+          </Link>
+        </div>
+      </div>
+
+      {/* Article Content */}
+      <article className="py-12 md:py-16">
+        <div className="max-w-4xl mx-auto px-4">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="inline-block mb-4">
+              <span className="tag-category">{article.categoryName}</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">{article.title}</h1>
+
+            {/* Author Info */}
+            <div className="flex items-center gap-4 pb-6 border-b border-border">
+              <Image
+                src={authorAvatarSrc}
+                alt={article.authorName}
+                width={56}
+                height={56}
+                className="h-14 w-14 rounded-full border border-border object-cover"
+              />
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">{article.authorName}</p>
+                <p className="text-sm text-muted-foreground">{formattedDate}</p>
+              </div>
+              <button className="btn-primary text-sm">Follow</button>
+            </div>
+          </div>
+
+          {/* Featured Image */}
+          <div className="relative mb-12 h-96 rounded-xl overflow-hidden shadow-lg">
+            <Image
+              src={coverImageSrc}
+              alt={article.title}
+              fill
+              className="object-cover"
+              sizes="(min-width: 1024px) 60vw, 100vw"
+              priority
+            />
+          </div>
+
+          {/* Article Body */}
+          <div className="prose prose-lg max-w-none mb-12">
+            <div className="text-lg leading-relaxed text-foreground space-y-6">
+              {article.body
+                .split(/\n{2,}/)
+                .map((paragraph) => paragraph.trim())
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+            </div>
+          </div>
+
+          {/* Engagement Section */}
+          <div className="card-base p-6 mb-12 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              <button
+                onClick={handleToggleLike}
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Heart size={24} fill={liked ? "currentColor" : "none"} className={liked ? "text-primary" : ""} />
+                <span className="font-semibold">{likesCount}</span>
+              </button>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MessageCircle size={24} />
+                <span className="font-semibold">{comments.length}</span>
+              </div>
+            </div>
+
+            {/* Share Buttons */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-muted-foreground">Share:</span>
+              <button className="p-2 bg-accent/10 text-accent rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors">
+                <Share2 size={20} />
+              </button>
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(currentUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-accent/10 text-accent rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 7-7 7-7" />
+                </svg>
+              </a>
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-accent/10 text-accent rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18 2h-3a6 6 0 00-6 6v3H7v4h2v8h4v-8h3l1-4h-4V8a1 1 0 011-1h3z" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          {/* Comments Section */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-foreground mb-6">Comments ({comments.length})</h2>
+
+            {/* Add Comment */}
+            <div className="card-base p-6 mb-8">
+              <div className="flex gap-4">
+                <Image
+                  src={placeholderAvatarSrc}
+                  alt="Your avatar"
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 rounded-full border border-border object-cover"
+                />
+                <div className="flex-1">
+                  <textarea
+                    value={commentInput}
+                    onChange={(event) => setCommentInput(event.target.value)}
+                    placeholder="Share your thoughts about this article..."
+                    className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    rows={3}
+                  />
+                  <div className="flex justify-end mt-3">
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!commentInput.trim()}
+                      className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Post Comment
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Comments List */}
+            <div className="space-y-4">
+              {comments.map((comment) => (
+                <div key={comment.id} className="card-base p-6">
+                  <div className="flex gap-4">
+                    <Image
+                      src={placeholderAvatarSrc}
+                      alt={comment.author}
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 rounded-full border border-border object-cover"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-foreground">{comment.author}</p>
+                        <p className="text-xs text-muted-foreground">{comment.date}</p>
+                      </div>
+                      <p className="text-foreground mt-2">{comment.text}</p>
+                      <button className="text-sm text-primary hover:text-secondary transition-colors mt-2 font-medium">
+                        Reply
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {comments.length === 0 && (
+                <div className="card-base p-6 text-center text-muted-foreground">
+                  Be the first to share your thoughts about this destination.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Author Bio */}
+          <div className="card-base p-8 bg-gradient-to-r from-primary/5 to-secondary/5 border-l-4 border-primary">
+            <div className="flex gap-6">
+              <Image
+                src={authorAvatarSrc}
+                alt={article.authorName}
+                width={80}
+                height={80}
+                className="h-20 w-20 rounded-full border border-border object-cover"
+              />
+              <div>
+                <h3 className="text-xl font-bold text-foreground mb-2">About {article.authorName}</h3>
+                <p className="text-foreground mb-4">{authorBio}</p>
+                <button className="btn-primary text-sm">Follow Author</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  )
+}
