@@ -4,7 +4,10 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Check } from "lucide-react"
+
+import { registerUser } from "@/lib/auth"
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -17,6 +20,10 @@ export default function RegisterPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
+
+  const router = useRouter()
 
   const passwordStrength = {
     hasLength: formData.password.length >= 8,
@@ -33,16 +40,31 @@ export default function RegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     if (!isPasswordStrong || !passwordsMatch || !agreedToTerms) return
 
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
+    setErrorMessage("")
+    setSuccessMessage("")
+
+    try {
+      const username = formData.name.trim() || formData.email.split("@")[0] || `user${Date.now()}`
+      await registerUser({
+        username,
+        email: formData.email,
+        password: formData.password,
+      })
+
+      setSuccessMessage("Account created successfully. Please sign in to continue.")
+      setTimeout(() => {
+        router.push("/login")
+      }, 1000)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to create account. Please try again.")
+    } finally {
       setIsLoading(false)
-      // Handle registration logic here
-    }, 1500)
+    }
   }
 
   return (
@@ -210,6 +232,13 @@ export default function RegisterPage() {
               {isLoading ? "Creating account..." : "Create Account"}
             </button>
           </form>
+
+          {(errorMessage || successMessage) && (
+            <div className="mt-4 text-sm">
+              {errorMessage && <p className="text-destructive">{errorMessage}</p>}
+              {successMessage && <p className="text-emerald-600">{successMessage}</p>}
+            </div>
+          )}
         </div>
 
         {/* Sign In Link */}

@@ -4,22 +4,41 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
+
+import { loginUser } from "@/lib/auth"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const router = useRouter()
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!email || !password) return
+
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
+    setErrorMessage("")
+    setSuccessMessage("")
+
+    try {
+      await loginUser({ identifier: email, password })
+
+      setSuccessMessage("Signed in successfully. Redirecting to articles...")
+      setTimeout(() => {
+        router.push("/articles")
+      }, 800)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to sign in. Please try again.")
+    } finally {
       setIsLoading(false)
-      // Handle login logic here
-    }, 1500)
+    }
   }
 
   return (
@@ -94,12 +113,19 @@ export default function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !email || !password}
               className="w-full btn-primary py-3 font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
           </form>
+
+          {(errorMessage || successMessage) && (
+            <div className="mt-4 text-sm">
+              {errorMessage && <p className="text-destructive">{errorMessage}</p>}
+              {successMessage && <p className="text-emerald-600">{successMessage}</p>}
+            </div>
+          )}
 
           {/* Divider */}
           <div className="relative my-6">

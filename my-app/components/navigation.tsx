@@ -1,11 +1,82 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
-import { Menu, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Menu, X, LogOut, User } from "lucide-react"
+
+import { clearStoredUser, getStoredUser } from "@/lib/auth"
+import { cn } from "@/lib/utils"
+
+interface StoredUser {
+  username?: string
+  email?: string
+}
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState<StoredUser | null>(null)
+
+  useEffect(() => {
+    setUser(getStoredUser())
+
+    const handleStorage = () => {
+      setUser(getStoredUser())
+    }
+
+    window.addEventListener("storage", handleStorage)
+    return () => {
+      window.removeEventListener("storage", handleStorage)
+    }
+  }, [])
+
+  const handleSignOut = useCallback(() => {
+    clearStoredUser()
+    setUser(null)
+  }, [])
+
+  const userName = useMemo(() => {
+    if (!user) return null
+    return user.username || user.email?.split("@")[0] || "Traveller"
+  }, [user])
+
+  const navLinks = (
+    <>
+      <Link href="/articles" className="text-foreground hover:text-primary transition-colors font-medium">
+        Explore
+      </Link>
+      <Link href="/articles" className="text-foreground hover:text-primary transition-colors font-medium">
+        Articles
+      </Link>
+      <Link href="/about" className="text-foreground hover:text-primary transition-colors font-medium">
+        About
+      </Link>
+    </>
+  )
+
+  const authActions = userName ? (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-foreground">
+        <User size={18} className="text-primary" />
+        <span className="text-sm font-medium">{userName}</span>
+      </div>
+      <button
+        onClick={handleSignOut}
+        className="flex items-center gap-2 text-sm font-semibold text-destructive hover:text-destructive/80 transition-colors"
+      >
+        <LogOut size={18} />
+        Sign out
+      </button>
+    </div>
+  ) : (
+    <>
+      <Link href="/login" className="text-primary font-semibold hover:text-secondary transition-colors">
+        Sign In
+      </Link>
+      <Link href="/register" className="btn-primary text-sm">
+        Get Started
+      </Link>
+    </>
+  )
 
   return (
     <nav className="sticky top-0 z-50 bg-card shadow-md border-b border-border">
@@ -20,26 +91,10 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/articles" className="text-foreground hover:text-primary transition-colors font-medium">
-              Explore
-            </Link>
-            <Link href="/articles" className="text-foreground hover:text-primary transition-colors font-medium">
-              Articles
-            </Link>
-            <Link href="/about" className="text-foreground hover:text-primary transition-colors font-medium">
-              About
-            </Link>
-          </div>
+          <div className="hidden md:flex items-center gap-8">{navLinks}</div>
 
-          {/* Auth Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/login" className="text-primary font-semibold hover:text-secondary transition-colors">
-              Sign In
-            </Link>
-            <Link href="/register" className="btn-primary text-sm">
-              Get Started
-            </Link>
+          <div className={cn("hidden md:flex items-center gap-4", userName ? "text-sm" : undefined)}>
+            {authActions}
           </div>
 
           {/* Mobile Menu Button */}
@@ -54,22 +109,35 @@ export function Navigation() {
         {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden pb-4 border-t border-border">
-            <Link href="/articles" className="block py-2 text-foreground hover:text-primary transition-colors">
-              Explore
-            </Link>
-            <Link href="/articles" className="block py-2 text-foreground hover:text-primary transition-colors">
-              Articles
-            </Link>
-            <Link href="/about" className="block py-2 text-foreground hover:text-primary transition-colors">
-              About
-            </Link>
-            <div className="flex gap-3 mt-4 pt-4 border-t border-border">
-              <Link href="/login" className="flex-1 text-center py-2 text-primary font-semibold">
-                Sign In
-              </Link>
-              <Link href="/register" className="flex-1 btn-primary text-sm">
-                Get Started
-              </Link>
+            {navLinks}
+            <div className="mt-4 pt-4 border-t border-border">
+              {userName ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+                    <User size={18} className="text-primary shrink-0" />
+                    <span className="text-sm font-medium text-foreground">{userName}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSignOut()
+                      setIsOpen(false)
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg border border-destructive text-destructive py-2 text-sm font-semibold"
+                  >
+                    <LogOut size={18} />
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <Link href="/login" className="flex-1 text-center py-2 text-primary font-semibold">
+                    Sign In
+                  </Link>
+                  <Link href="/register" className="flex-1 btn-primary text-sm">
+                    Get Started
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}
