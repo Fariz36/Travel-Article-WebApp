@@ -11,7 +11,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ### 1. Clone the repo
 
 ```bash
-git clone [https://github.com/your-username/your-project.git](https://github.com/Fariz36/Travel-Article-WebApp/)
+git clone https://github.com/Fariz36/Travel-Article-WebApp
 cd my-app
 ```
 
