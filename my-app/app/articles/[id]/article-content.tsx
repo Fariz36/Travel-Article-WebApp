@@ -146,7 +146,7 @@ export function ArticleContent({ article }: ArticleContentProps) {
   return (
     <div>
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-b from-muted/40 to-background pt-24 pb-12">
+      <div className="relative bg-linear-to-b from-muted/40 to-background pt-24 pb-12">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <Link
             href="/articles"
@@ -366,7 +366,7 @@ export function ArticleContent({ article }: ArticleContentProps) {
           </div>
 
           {/* Author Bio */}
-          <div className="card-base p-8 bg-gradient-to-r from-primary/5 to-secondary/5 border-l-4 border-primary">
+          <div className="card-base p-8 bg-linear-to-r from-primary/5 to-secondary/5 border-l-4 border-primary">
             <div className="flex gap-6">
               <Image
                 src={authorAvatarSrc}

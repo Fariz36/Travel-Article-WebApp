@@ -73,7 +73,7 @@ export default function RegisterPage() {
         {/* Logo & Branding */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-16 h-16 bg-linear-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-md">
               <span className="text-white font-bold text-3xl">T</span>
             </div>
           </div>
