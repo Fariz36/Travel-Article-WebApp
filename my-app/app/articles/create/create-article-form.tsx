@@ -86,7 +86,8 @@ export function CreateArticleForm({ categories }: CreateArticleFormProps) {
 
       setSuccessMessage("Article published successfully. Redirecting...")
       setTimeout(() => {
-        router.push(created.documentId ? `/articles/${created.documentId}` : "/articles")
+        const targetId = created.documentId || String(created.id)
+        router.push(targetId ? `/articles/${targetId}` : "/articles")
       }, 900)
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to publish the article. Please try again."

@@ -1,10 +1,6 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://extra-brooke-yeremiadio-46b2183e.koyeb.app"
 
-const API_TOKEN =
-  process.env.NEXT_PUBLIC_API_TOKEN ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzM3LCJpYXQiOjE3NjE4MDQ4MzMsImV4cCI6MTc2NDM5NjgzM30.2Ns_buAX6T6puaFsxy7LQuj191q0j7F1o1pzDSEEFKQ"
-
 type ApiListResponse<T> = {
   data: T[]
   meta: {
@@ -129,11 +125,25 @@ export interface CreateCategoryPayload {
 
 const defaultRevalidate = 60
 
+async function resolveAuthToken(): Promise<string | null> {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("travelhub_token")
+  }
+
+  try {
+    const { cookies } = await import("next/headers")
+    const Cookie = await cookies();
+    return Cookie.get("travelhub_token")?.value ?? null
+  } catch (error) {
+    console.warn("Failed to read auth token from cookies on the server:", error)
+    return null
+  }
+}
+
 async function fetchFromApi<T>(path: string, init: RequestInit = {}, revalidate = defaultRevalidate): Promise<T> {
   const headers = new Headers(init.headers ?? {})
   if (!headers.has("Authorization")) {
-    const storedToken = typeof window !== "undefined" ? localStorage.getItem("travelhub_token") : null
-    const token = storedToken || API_TOKEN
+    const token = await resolveAuthToken()
     if (token) {
       headers.set("Authorization", `Bearer ${token}`)
     }
@@ -141,6 +151,8 @@ async function fetchFromApi<T>(path: string, init: RequestInit = {}, revalidate 
   if (!headers.has("Content-Type") && init.method && init.method !== "GET") {
     headers.set("Content-Type", "application/json")
   }
+
+  // console.log("CALLING API : ", `${API_BASE_URL}${path}`, "with authorization : ", headers.get("Authorization"));
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,

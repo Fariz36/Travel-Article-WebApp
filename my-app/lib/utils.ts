@@ -6,11 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getValidImageUrl(url?: string | null): string {
-  if (!url) return "/placeholder.svg"
+  if (!url) return "/placeholder.png"
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
     return url
   }
-  return "/placeholder.svg"
+  return "/placeholder.png"
 }
 
 export function pickRandomItems<T>(items: T[], count: number): T[] {

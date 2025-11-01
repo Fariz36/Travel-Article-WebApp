@@ -42,7 +42,6 @@ export function Navigation() {
   const navLinks = useMemo(() => {
     const links = [
       { href: "/articles", label: "Explore" },
-      { href: "/articles", label: "Articles" },
       { href: "/about", label: "About" },
     ]
 

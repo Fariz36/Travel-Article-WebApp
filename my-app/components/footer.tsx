@@ -28,16 +28,6 @@ export function Footer() {
                   All Articles
                 </Link>
               </li>
-              <li>
-                <Link href="/articles" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Destinations
-                </Link>
-              </li>
-              <li>
-                <Link href="/articles" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Categories
-                </Link>
-              </li>
             </ul>
           </div>
 

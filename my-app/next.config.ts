@@ -5,46 +5,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "res.cloudinary.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "plus.unsplash.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "asset.indonesia.travel",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "webasset.b-cdn.net",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "satutravel.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "statik.tempo.co",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.pexels.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
         hostname: "**.com",
         pathname: "/**",
       },
@@ -57,7 +17,22 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.org",
         pathname: "/**",
-      }
+      },
+      {
+        protocol: "https",
+        hostname: "**.travel",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.net",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.co",
+        pathname: "/**",
+      },
     ],
   },
 };

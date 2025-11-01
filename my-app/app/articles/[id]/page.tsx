@@ -7,13 +7,18 @@ import { getArticleByDocumentId, type ArticleDetail } from "@/lib/api"
 import { ArticleContent } from "./article-content"
 
 interface ArticlePageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
-  const documentId = params.id
+  const { id: documentId } = await params
+
+  if (!documentId || documentId === "undefined") {
+    notFound()
+  }
+
   let fetchedArticle: ArticleDetail | null = null
 
   try {
