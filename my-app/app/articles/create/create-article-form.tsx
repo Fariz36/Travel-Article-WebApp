@@ -254,13 +254,13 @@ export function CreateArticleForm({ categories }: CreateArticleFormProps) {
 
             <div>
               <p className="block text-sm font-semibold text-foreground mb-2">Cover Preview</p>
-              <div className="relative h-40 rounded-lg overflow-hidden border border-border bg-muted">
+              <div className="relative w-full rounded-lg overflow-hidden border border-border bg-muted">
                 <Image
                   src={coverPreview}
                   alt="Cover preview"
-                  fill
-                  className="object-cover"
-                  sizes="(min-width: 768px) 25vw, 50vw"
+                  width={800}
+                  height={400}
+                  className="w-full h-auto rounded-lg"
                 />
               </div>
             </div>
