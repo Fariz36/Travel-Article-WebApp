@@ -42,7 +42,7 @@ export default async function EditArticlePage({ params }: EditArticlePageProps) 
     <main className="min-h-screen bg-background">
       <Navigation />
 
-      <section className="bg-gradient-to-b from-muted/50 to-background py-12 md:py-16">
+      <section className="bg-linear-to-b from-muted/50 to-background py-12 md:py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-10">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Edit Article</h1>

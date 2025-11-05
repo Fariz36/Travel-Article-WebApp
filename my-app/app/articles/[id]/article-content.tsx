@@ -149,13 +149,15 @@ export function ArticleContent({ article }: ArticleContentProps) {
   const formattedDate = formatDate(article.createdAt)
   const isArticleOwner = useMemo(() => {
     if (!currentUser) return false
-    if (article.authorDocumentId && currentUser.documentId && article.authorDocumentId === currentUser.documentId) {
-      return true
-    }
-    if (article.authorId && currentUser.id && article.authorId === currentUser.id) {
-      return true
-    }
-    return false
+    const matchesDocumentId =
+      Boolean(article.authorDocumentId) &&
+      Boolean(currentUser.documentId) &&
+      currentUser.documentId === article.authorDocumentId
+    const matchesAuthorId =
+      typeof article.authorId === "number" &&
+      typeof currentUser.id === "number" &&
+      currentUser.id === article.authorId
+    return matchesDocumentId || matchesAuthorId
   }, [article.authorDocumentId, article.authorId, currentUser])
   const authorBio = "We are gathering more details about this author. Check back soon for their full travel story."
   const coverImageSrc = getValidImageUrl(article.coverImageUrl)

@@ -39,19 +39,23 @@ export function EditArticleForm({ article, categories }: EditArticleFormProps) {
 
   useEffect(() => {
     const ensureCategoryPresence = () => {
-      if (!article.categoryId || !article.categoryDocumentId || !article.categoryName) {
+      const categoryId = article.categoryId
+      const categoryDocumentId = article.categoryDocumentId
+      const categoryName = article.categoryName
+
+      if (categoryId == null || !categoryDocumentId || !categoryName) {
         return
       }
 
       setCategoryOptions((prev) => {
-        const exists = prev.some((category) => category.id === article.categoryId)
+        const exists = prev.some((category) => category.id === categoryId)
         if (exists) return prev
         return [
           ...prev,
           {
-            id: article.categoryId,
-            documentId: article.categoryDocumentId,
-            name: article.categoryName,
+            id: categoryId,
+            documentId: categoryDocumentId,
+            name: categoryName,
           },
         ]
       })
@@ -80,10 +84,15 @@ export function EditArticleForm({ article, categories }: EditArticleFormProps) {
       const authenticated = hasStoredToken()
       setIsAuthenticated(authenticated)
       const storedUser = getStoredUser()
-      const owner =
-        !!storedUser &&
-        ((article.authorDocumentId && storedUser.documentId === article.authorDocumentId) ||
-          (article.authorId && storedUser.id === article.authorId))
+      const matchesDocumentId =
+        Boolean(article.authorDocumentId) &&
+        Boolean(storedUser?.documentId) &&
+        storedUser?.documentId === article.authorDocumentId
+      const matchesAuthorId =
+        typeof article.authorId === "number" &&
+        typeof storedUser?.id === "number" &&
+        storedUser.id === article.authorId
+      const owner = Boolean(storedUser) && (matchesDocumentId || matchesAuthorId)
       setIsOwner(owner)
       setAuthStatusChecked(true)
     }
