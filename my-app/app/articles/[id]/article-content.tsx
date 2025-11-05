@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, Heart, MessageCircle, Share2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, Heart, MessageCircle, Pencil, Share2, Trash2 } from "lucide-react"
 
-import { createComment, type ArticleDetail } from "@/lib/api"
+import { createComment, deleteArticle, type ArticleDetail } from "@/lib/api"
 import { getStoredUser, hasStoredToken } from "@/lib/auth"
 import { getValidImageUrl } from "@/lib/utils"
 
@@ -35,6 +36,7 @@ function formatDate(isoDate: string) {
 }
 
 export function ArticleContent({ article }: ArticleContentProps) {
+  const router = useRouter()
   const initialComments = useMemo<DisplayComment[]>(
     () =>
       article.comments.map((comment) => ({
@@ -55,9 +57,12 @@ export function ArticleContent({ article }: ArticleContentProps) {
   const [currentUrl, setCurrentUrl] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentUserName, setCurrentUserName] = useState("You")
+  const [currentUser, setCurrentUser] = useState<ReturnType<typeof getStoredUser>>(null)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentError, setCommentError] = useState("")
   const [commentSuccess, setCommentSuccess] = useState("")
+  const [isDeletingArticle, setIsDeletingArticle] = useState(false)
+  const [articleError, setArticleError] = useState("")
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -75,7 +80,11 @@ export function ArticleContent({ article }: ArticleContentProps) {
       setIsAuthenticated(authenticated)
       const storedUser = getStoredUser()
       if (storedUser) {
+        setCurrentUser(storedUser)
         setCurrentUserName(storedUser.username ?? storedUser.email?.split("@")[0] ?? "You")
+      } else {
+        setCurrentUser(null)
+        setCurrentUserName("You")
       }
     }
 
@@ -138,10 +147,46 @@ export function ArticleContent({ article }: ArticleContentProps) {
   }
 
   const formattedDate = formatDate(article.createdAt)
+  const isArticleOwner = useMemo(() => {
+    if (!currentUser) return false
+    if (article.authorDocumentId && currentUser.documentId && article.authorDocumentId === currentUser.documentId) {
+      return true
+    }
+    if (article.authorId && currentUser.id && article.authorId === currentUser.id) {
+      return true
+    }
+    return false
+  }, [article.authorDocumentId, article.authorId, currentUser])
   const authorBio = "We are gathering more details about this author. Check back soon for their full travel story."
   const coverImageSrc = getValidImageUrl(article.coverImageUrl)
   const authorAvatarSrc = getValidImageUrl(null)
   const placeholderAvatarSrc = getValidImageUrl(null)
+
+  const handleDeleteArticle = async () => {
+    if (!isArticleOwner || isDeletingArticle) {
+      return
+    }
+
+    const confirmed = window.confirm("Are you sure you want to delete this article? This action cannot be undone.")
+    if (!confirmed) {
+      return
+    }
+
+    setIsDeletingArticle(true)
+    setArticleError("")
+
+    try {
+      await deleteArticle(article.documentId)
+      router.push("/articles")
+      router.refresh()
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete article. Please try again."
+      setArticleError(message)
+    } finally {
+      setIsDeletingArticle(false)
+    }
+  }
 
   return (
     <div>
@@ -181,7 +226,30 @@ export function ArticleContent({ article }: ArticleContentProps) {
                 <p className="font-semibold text-foreground">{article.authorName}</p>
                 <p className="text-sm text-muted-foreground">{formattedDate}</p>
               </div>
-              <button className="btn-primary text-sm">Follow</button>
+              <div className="flex items-center gap-3">
+                {isArticleOwner ? (
+                  <>
+                    <Link
+                      href={`/articles/${article.documentId}/edit`}
+                      className="btn-outline text-sm inline-flex items-center gap-2"
+                    >
+                      <Pencil size={16} />
+                      Edit Article
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleDeleteArticle}
+                      disabled={isDeletingArticle}
+                      className="btn-outline text-sm cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <Trash2 size={16} />
+                      {isDeletingArticle ? "Deleting..." : "Delete"}
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn-primary text-sm">Follow</button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -199,6 +267,7 @@ export function ArticleContent({ article }: ArticleContentProps) {
 
           {/* Article Body */}
           <div className="prose prose-lg max-w-none mb-12">
+            {articleError && <div className="mb-4 text-sm text-destructive">{articleError}</div>}
             <div className="text-lg leading-relaxed text-foreground space-y-6">
               {article.body
                 .split(/\n{2,}/)

@@ -61,8 +61,12 @@ export interface ArticleListItem {
   title: string
   description: string
   coverImageUrl: string | null
+  categoryId: number | null
+  categoryDocumentId: string | null
   categoryName: string
   authorName: string
+  authorId: number | null
+  authorDocumentId: string | null
   createdAt: string
 }
 
@@ -123,6 +127,13 @@ export interface CreateCommentPayload {
 export interface CreateCategoryPayload {
   name: string
   description?: string
+}
+
+export interface UpdateArticlePayload {
+  title?: string
+  description?: string
+  coverImageUrl?: string | null
+  categoryId?: number | null
 }
 
 export interface ArticlesListQueryParams {
@@ -189,8 +200,12 @@ function mapArticleToListItem(article: ArticleEntity): ArticleListItem {
     title: article.title,
     description: article.description,
     coverImageUrl: article.cover_image_url ?? null,
+    categoryId: article.category?.id ?? null,
+    categoryDocumentId: article.category?.documentId ?? null,
     categoryName: article.category?.name ?? "General",
     authorName: article.user?.username ?? "Anonymous",
+    authorId: article.user?.id ?? null,
+    authorDocumentId: article.user?.documentId ?? null,
     createdAt: article.createdAt,
   }
 }
@@ -351,4 +366,41 @@ export async function fetchCommentsWithUsers(documentIds: string[]): Promise<Com
   const results = await Promise.all(documentIds.map((documentId) => fetchCommentWithUser(documentId)))
 
   return results.filter((comment): comment is CommentEntity => comment !== null)
+}
+
+export async function updateArticle(documentId: string, payload: UpdateArticlePayload): Promise<ArticleEntity> {
+  const data: Record<string, unknown> = {}
+  if (payload.title !== undefined) {
+    data.title = payload.title
+  }
+  if (payload.description !== undefined) {
+    data.description = payload.description
+  }
+  if (payload.coverImageUrl !== undefined) {
+    data.cover_image_url = payload.coverImageUrl ?? null
+  }
+  if (payload.categoryId !== undefined) {
+    data.category = payload.categoryId ?? null
+  }
+
+  const response = await fetchFromApi<ApiSingleResponse<ArticleEntity>>(
+    `/api/articles/${documentId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ data }),
+    },
+    0
+  )
+
+  return response.data
+}
+
+export async function deleteArticle(documentId: string): Promise<void> {
+  await fetchFromApi<ApiSingleResponse<ArticleEntity>>(
+    `/api/articles/${documentId}`,
+    {
+      method: "DELETE",
+    },
+    0
+  )
 }

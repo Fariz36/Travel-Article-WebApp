@@ -16,8 +16,12 @@ const FALLBACK_ARTICLE: ArticleListItem = {
   description:
     "Read inspiring travel stories from adventurers around the globe. Share your experiences, discover hidden gems, and connect with fellow travelers.",
   coverImageUrl: "/tropical-sunset-palms.png",
+  categoryId: null,
+  categoryDocumentId: null,
   categoryName: "Featured Story",
   authorName: "TravelHub Team",
+  authorId: null,
+  authorDocumentId: null,
   createdAt: new Date().toISOString(),
 }
 
