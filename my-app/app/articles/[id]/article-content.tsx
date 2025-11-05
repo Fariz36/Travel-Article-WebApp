@@ -254,16 +254,18 @@ export function ArticleContent({ article }: ArticleContentProps) {
           </div>
 
           {/* Featured Image */}
-          <div className="relative mb-12 h-96 rounded-xl overflow-hidden shadow-lg">
+          <div className="relative mb-12 rounded-xl overflow-hidden shadow-lg">
             <Image
               src={coverImageSrc}
               alt={article.title}
-              fill
-              className="object-cover"
+              width={1200}
+              height={800} // e.g., 3:2 ratio — controls proportional scaling
+              className="object-cover w-full h-auto rounded-xl"
               sizes="(min-width: 1024px) 60vw, 100vw"
               priority
             />
           </div>
+
 
           {/* Article Body */}
           <div className="prose prose-lg max-w-none mb-12">
