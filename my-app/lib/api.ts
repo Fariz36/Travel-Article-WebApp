@@ -4,12 +4,7 @@ const API_BASE_URL =
 type ApiListResponse<T> = {
   data: T[]
   meta: {
-    pagination?: {
-      page: number
-      pageSize: number
-      pageCount: number
-      total: number
-    }
+    pagination?: ApiPagination
     [key: string]: unknown
   }
 }
@@ -17,6 +12,13 @@ type ApiListResponse<T> = {
 type ApiSingleResponse<T> = {
   data: T
   meta: Record<string, unknown>
+}
+
+export type ApiPagination = {
+  page: number
+  pageSize: number
+  pageCount: number
+  total: number
 }
 
 export interface ArticleEntity {
@@ -123,6 +125,18 @@ export interface CreateCategoryPayload {
   description?: string
 }
 
+export interface ArticlesListQueryParams {
+  pageSize?: number
+  page?: number
+  categoryName?: string
+  searchQuery?: string
+}
+
+export interface ArticlesListQueryResult {
+  articles: ArticleListItem[]
+  pagination: ApiPagination | null
+}
+
 const defaultRevalidate = 60
 
 async function resolveAuthToken(): Promise<string | null> {
@@ -182,6 +196,11 @@ function mapArticleToListItem(article: ArticleEntity): ArticleListItem {
 }
 
 export async function getArticlesList(params?: { pageSize?: number; page?: number }): Promise<ArticleListItem[]> {
+  const result = await fetchArticlesList(params)
+  return result.articles
+}
+
+export async function fetchArticlesList(params?: ArticlesListQueryParams): Promise<ArticlesListQueryResult> {
   const searchParams = new URLSearchParams()
   searchParams.set("populate", "*")
   searchParams.set("sort", "createdAt:desc")
@@ -191,10 +210,20 @@ export async function getArticlesList(params?: { pageSize?: number; page?: numbe
   if (params?.page) {
     searchParams.set("pagination[page]", params.page.toString())
   }
+  if (params?.categoryName) {
+    searchParams.set("filters[category][name][$eqi]", params.categoryName)
+  }
+  const trimmedQuery = params?.searchQuery?.trim()
+  if (trimmedQuery) {
+    searchParams.set("filters[title][$contains]", trimmedQuery)
+  }
 
   const response = await fetchFromApi<ApiListResponse<ArticleEntity>>(`/api/articles?${searchParams.toString()}`)
 
-  return response.data.map(mapArticleToListItem)
+  return {
+    articles: response.data.map(mapArticleToListItem),
+    pagination: response.meta.pagination ?? null,
+  }
 }
 
 export async function getArticleByDocumentId(documentId: string): Promise<ArticleDetail> {
@@ -209,11 +238,16 @@ export async function getArticleByDocumentId(documentId: string): Promise<Articl
 
   const article = response.data
 
+  const commentDocumentIds =
+    article.comments?.map((comment) => comment.documentId).filter((id): id is string => Boolean(id)) ?? []
+
+  const comments = await fetchCommentsWithUsers(commentDocumentIds)
+
   return {
     ...mapArticleToListItem(article),
     body: article.description ?? "",
     comments:
-      article.comments?.map((comment) => ({
+      comments.map((comment) => ({
         id: comment.id,
         documentId: comment.documentId,
         content: comment.content,
@@ -293,4 +327,28 @@ export async function createCategory(payload: CreateCategoryPayload): Promise<Ca
   )
 
   return response.data
+}
+
+async function fetchCommentWithUser(documentId: string): Promise<CommentEntity | null> {
+  try {
+    const response = await fetchFromApi<ApiSingleResponse<CommentEntity>>(
+      `/api/comments/${documentId}?populate[user]=*`,
+      {},
+      0
+    )
+    return response.data ?? null
+  } catch (error) {
+    console.error(`Failed to load comment ${documentId}:`, error)
+    return null
+  }
+}
+
+export async function fetchCommentsWithUsers(documentIds: string[]): Promise<CommentEntity[]> {
+  if (documentIds.length === 0) {
+    return []
+  }
+
+  const results = await Promise.all(documentIds.map((documentId) => fetchCommentWithUser(documentId)))
+
+  return results.filter((comment): comment is CommentEntity => comment !== null)
 }

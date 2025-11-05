@@ -1,16 +1,43 @@
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-import { getArticlesList, type ArticleListItem } from "@/lib/api"
+import {
+  fetchArticlesList,
+  getCategoriesList,
+  type ApiPagination,
+  type ArticleListItem,
+  type CategoryOption,
+} from "@/lib/api"
 
 import { ArticlesExplorer } from "./_components/articles-explorer"
 
 export default async function ArticlesPage() {
   let articles: ArticleListItem[] = []
+  let pagination: ApiPagination | null = null
+  let categories: CategoryOption[] = []
 
   try {
-    articles = await getArticlesList({ pageSize: 60 })
+    const result = await fetchArticlesList({ pageSize: 6, page: 1 })
+    articles = result.articles
+    pagination = result.pagination
   } catch (error) {
     console.error("Failed to load articles list:", error)
+  }
+
+  try {
+    categories = await getCategoriesList()
+  } catch (error) {
+    console.error("Failed to load categories list:", error)
+  }
+
+  if (categories.length === 0) {
+    const fallbackCategories = Array.from(new Set(articles.map((article) => article.categoryName))).map(
+      (name, index) => ({
+        id: index,
+        documentId: `${index}`,
+        name,
+      })
+    )
+    categories = fallbackCategories
   }
 
   return (
@@ -30,7 +57,7 @@ export default async function ArticlesPage() {
       {/* Main Content */}
       <section className="py-12 md:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ArticlesExplorer articles={articles} />
+          <ArticlesExplorer initialArticles={articles} initialPagination={pagination} categories={categories} />
         </div>
       </section>
 
